@@ -5,7 +5,7 @@ const app = express();
 
 app.use(express.json());
 
-const URL_APPS_SCRIPT = "TU_URL_DE_GOOGLE_SCRIPT_AQUI";
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwi6WJaYksXUxtTBXfMjXh7A2kFzYZDiHD4rpoRWO997skMi6WAJ0K868VTSOwAOoCE/exec";
 
 app.post('/registrar', async (req, res) => {
     const { producto, inicial, consumos, real, fotoUrl, responsable } = req.body;
