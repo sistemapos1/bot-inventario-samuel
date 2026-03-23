@@ -1,55 +1,44 @@
-﻿const express = require('express');
+const express = require('express');
+const Tesseract = require('tesseract.js'); // Librería para leer fotos
 const axios = require('axios');
 const app = express();
 
-// Para que el bot pueda leer datos JSON que le enviemos
 app.use(express.json());
 
-// --- CONFIGURACIÓN ---
-// Pega aquí la URL que copiaste de Google Apps Script (la que termina en /exec)
-const URL_WEBHOOK_GOOGLE = "TU_URL_DE_APPS_SCRIPT_AQUI";
+const URL_EXCEL = "TU_URL_DE_APPS_SCRIPT_AQUI";
 
-// 1. Ruta principal para que Render vea que el bot está vivo
-app.get('/', (req, res) => {
-    res.send('🚀 Bot de Inventario de Samuel operativo 24/7');
-});
-
-// 2. Función para mandar los datos al Excel
-async function enviarAlExcel(datos) {
-    try {
-        const respuesta = await axios.post(URL_WEBHOOK_GOOGLE, {
-            producto: datos.producto || "Sin nombre",
-            inicial: datos.inicial || 0,
-            ventas: datos.ventas || 0,
-            consumos: datos.consumos || 0,
-            esperado: (datos.inicial - datos.ventas - datos.consumos) || 0,
-            real: datos.real || 0,
-            faltante: (datos.real - (datos.inicial - datos.ventas - datos.consumos)) || 0,
-            fecha: new Date().toLocaleDateString('es-CO'), // Fecha en la H
-            responsable: datos.responsable || "Sistema"    // Responsable en la I
-        });
-        console.log("✅ Datos enviados al Sheets:", respuesta.data);
-        return true;
-    } catch (error) {
-        console.error("❌ Error enviando a Sheets:", error.message);
-        return false;
-    }
+// --- LA MAGIA: LEER LA FOTO ---
+async function leerTicket(urlImagen) {
+    console.log("Leyendo ticket...");
+    const { data: { text } } = await Tesseract.recognize(urlImagen, 'spa');
+    
+    // Aquí el bot busca palabras clave en el texto del ticket
+    // Ejemplo: Busca la fecha 22/03/2026
+    const fechaEncontrada = text.match(/\d{2}\/\d{2}\/\d{4}/) || [new Date().toLocaleDateString()];
+    
+    return {
+        texto: text,
+        fecha: fechaEncontrada[0]
+    };
 }
 
-// 3. Ruta para recibir datos de la App o del OCR
-app.post('/registrar', async (req, res) => {
-    const datosRecibidos = req.body;
-    const exito = await enviarAlExcel(datosRecibidos);
+app.post('/procesar-cierre', async (req, res) => {
+    const { fotoUrl, responsable, inicial, real } = req.body;
     
-    if (exito) {
-        res.status(200).send("Registro completado");
-    } else {
-        res.status(500).send("Error en el servidor");
-    }
+    const resultado = await leerTicket(fotoUrl);
+    
+    // El bot envía todo al Excel
+    await axios.post(URL_EXCEL, {
+        producto: "Cierre Diario", // O el nombre que extraiga del texto
+        inicial: inicial,
+        ventas: 0, // Aquí pondrías lo que el bot leyó en el ticket
+        consumos: 0,
+        real: real,
+        fecha: resultado.fecha,
+        responsable: responsable
+    });
+
+    res.send("¡Cierre procesado y guardado en la H e I!");
 });
 
-// Levantar el servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Bot encendido en puerto ${PORT}`);
-});
+app.listen(process.env.PORT || 3000);
