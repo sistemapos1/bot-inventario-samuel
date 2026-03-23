@@ -1,0 +1,16 @@
+﻿{
+  "name": "bot-inventario-samuel",
+  "version": "1.0.0",
+  "description": "Bot 24/7 para control de inventario y ventas",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
